@@ -1,0 +1,91 @@
+- name: Configuration of hadoop cluster by using Ansible 
+  hosts: datanode
+  vars_prompt:
+  - name: namenode_ip
+    prompt: "Enter namenode IP Address"
+    private: no
+
+  tasks:
+  - name: Download JDK software 
+    get_url:
+       url: https://hadoop-task.s3.ap-south-1.amazonaws.com/jdk-8u171-linux-x64.rpm
+       dest: /root/
+
+  - name: Download hadoop software 
+    get_url:
+        url: https://hadoop-task.s3.ap-south-1.amazonaws.com/hadoop-1.2.1-1.x86_64.rpm
+        dest: /root/
+
+  - name: Install JDK software 
+    shell: " rpm -i jdk-8u171-linux-x64.rpm"
+    register: jdk
+
+  - name: JDK installation info 
+    debug:
+         var: jdk
+
+  - name: Install Hadoop Software 
+    shell: "rpm -i hadoop-1.2.1-1.x86_64.rpm --force"
+    register: hadoop
+
+  - name: Hadoop installation info 
+    debug:
+         var: hadoop
+   
+  - name: Creation of datanode directory 
+    file:
+       path: /datanode_dir
+       state: directory
+    register: dir_output
+
+  - name: Output of creation of directory 
+    debug: 
+       var: dir_output
+
+  - name: Configuring hdfs-site file
+    blockinfile:
+      path: "/etc/hadoop/hdfs-site.xml"
+      insertafter: "<configuration>"
+      block:
+        <property>
+        <name>dfs.data.dir</name>
+        <value>/datanode_dir</value>
+        </property>
+    register: hdfs_file
+  
+  - name: 
+    debug:
+        var: hdfs_file
+
+  - name: Configuring core-site file
+    blockinfile:
+      path: "/etc/hadoop/core-site.xml"
+      insertafter: "<configuration>"
+      block:
+        <property>
+        <name>fs.default.name</name>
+        <value>hdfs://{{namenode_ip }}:9001</value>
+        </property>
+    register: core_file
+
+  - name:
+    debug:
+        var: core_file
+
+
+  - name: Start the datanode
+    shell: "hadoop-daemon.sh start datanode"
+    register: starting_dn
+
+  - name:
+    debug:
+        var: starting_dn
+
+  - name: Datanode check jps
+    shell: "jps"
+    register: check_jps
+
+  - name:
+    debug:
+        var: check_jps
+
